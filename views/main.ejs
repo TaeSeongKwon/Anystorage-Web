@@ -1,0 +1,202 @@
+<% include ./Handler/header %>
+		<script src="/js/socket.io.js"></script>
+		<style>
+			#main{
+				margin-top: 81px;
+			}
+			.hdd_icon{
+				font-size: 100px;
+			}
+			.hdd_sec{
+				text-align: center;
+				padding-top: 15px;
+				padding-bottom: 5px;
+				/*cursor: pointer;*/
+			}
+			.device_link{
+				color: #7b7b7b; 
+    			text-decoration: none;
+    			outline: 0;
+			}
+		</style>
+		<section id='main' class='container'>
+			<h1>내 저장 디바이스</h1>
+			<article class='panel panel-info'>
+				<div class='panel-heading'>
+					Online
+				</div>
+				<div class='panel-body'>
+					<div class='row' id='OnlineList'>
+						
+						<div class='col-md-3' id='empty_ui'>
+							<div class='thumbnail hdd_sec'>
+								<a class='device_link'><span class='glyphicon glyphicon-remove-circle hdd_icon' ></span></a>
+								<div class='caption'>
+									<h3>Empty Device!</h3>
+								</div>
+							</div>
+						</div>		
+
+					</div>
+				</div>
+				<!-- <div class='col-md-3'>
+							<div class='thumbnail hdd_sec'>
+								<a class='device_link' href='#'><span class='glyphicon glyphicon-hdd hdd_icon' ></span></a>
+								<div class='caption'>
+									<h3>Device Name1</h3>
+								</div>
+							</div>
+						</div> -->				
+			</article>
+			<article class='panel panel-danger'>
+				<div class='panel-heading'>
+					Offline
+				</div>
+				<div class='panel-body'>
+					<div class='row' id='OfflineList'>
+						<% if(deviceList.length == 0){ %>
+							<div class='col-md-3' id='empty_ui'>
+								<div class='thumbnail hdd_sec'>
+									<a class='device_link'><span class='glyphicon glyphicon-remove-circle hdd_icon' ></span></a>
+									<div class='caption'>
+										<h3>Empty Device!</h3>
+									</div>
+								</div>
+							</div>
+						<% }else{  %>
+							<% for(var idx =0; idx<deviceList.length; idx++ ) { %>
+								<% var row = deviceList[idx]; %>
+								<div class='col-md-3' id='<%=row['device_model']%>'>
+									<div class='thumbnail hdd_sec'>
+										<a class='device_link' id='<%=row['device_model']%>_link' href='#'><span class='glyphicon glyphicon-hdd hdd_icon' ></span></a>
+										<div class='caption'>
+											<h3><%=row['device_model'] %></h3>
+										</div>
+									</div>
+								</div>
+							<% } %>
+						<% } %>
+					</div>
+				</div>
+				
+			</article>
+			<hr>
+		</section>
+		<script>
+			// $(function(){
+			var kk;
+			var pp;
+			var socket = io.connect("www.devkts.kro.kr:9900");
+			var user = "<%=userInfo.mem_id%>";
+			function linkClick(){
+			// 	var device_serial = $(this).attr("value");
+			// 	socket.emit("connect_device", { member : user, device : device_serial});
+			}
+			socket.on("connect", function(data){
+				console.log("연결 성공!");
+				socket.on("type", function(data){
+					socket.emit('browser', {room : user});
+					
+					// setInterval();
+				});
+				socket.on("state", function(){
+					socket.emit('main_state', {});
+				});
+				socket.on("power_off_device", function(res){
+					var onlineList = $("#OnlineList");
+					var target = onlineList.find("#"+res.device_model);
+					var link = target.find("#"+res.device_model+"_link");
+					
+					var offlineList = $("#OfflineList");
+					var emptyTarget= offlineList.find("#empty_ui");
+
+					link.attr('value', null);
+					link.attr("href", null);
+					link[0].onclick = null;
+					target.remove();
+					
+					var list = onlineList.children();
+					if(list.length == 0){
+						// console.log("ㅁㄴㅇㄹ", onlineDevice	);
+						var empty_tag = "<div class='col-md-3' id='empty_ui'>";
+						empty_tag +=		"<div class='thumbnail hdd_sec'>";
+						empty_tag +=			"<a class='device_link'><span class='glyphicon glyphicon-remove-circle hdd_icon' ></span></a>";
+						empty_tag +=			"<div class='caption'>";
+						empty_tag +=				"<h3>Empty Device!</h3>";
+						empty_tag +=			"</div>";
+						empty_tag +=		"</div>";
+						empty_tag +=	"</div>";
+						onlineList.append($(empty_tag));
+						// list.add($(empty_tag));
+					}
+					if(emptyTarget > 0){
+						emptyTarget.remove();
+					}
+					offlineList.append(target);
+
+				});
+				socket.on("power_on_device", function(res){
+					var onlineList = $("#OnlineList");
+					var online_empty = onlineList.find("#empty_ui");
+					if(online_empty.length	> 0){
+						console.log("em", online_empty);
+						online_empty.remove();
+					}
+						
+					if(res.isExist){
+						var list = $('#OfflineList');
+						var target = list.find("#"+res.device_model);
+						console.log("target : ", target.length);
+						if(target.length <= 0){ 
+							console.log("empty");
+							return ;
+						}
+						var link = target.find("#"+res.device_model+"_link");
+						link.attr('value', res.device_serial);
+						link.attr("href", "/device/?name="+res.device_serial);
+						link[0].onclick = linkClick;
+						target.remove();
+						$("#OnlineList").append(target);
+						list = $('#OfflineList').children();
+
+						// var device = $(onlineDevice.outerHTML);
+						
+						// var onlineDevice = document.getElementById(res.device_model);
+						
+						// $("#OnlineList").append(device);
+						
+						if(list.length == 0){
+							// console.log("ㅁㄴㅇㄹ", onlineDevice	);
+							var empty_tag = "<div class='col-md-3' id='empty_ui'>";
+							empty_tag +=		"<div class='thumbnail hdd_sec'>";
+							empty_tag +=			"<a class='device_link'><span class='glyphicon glyphicon-remove-circle hdd_icon' ></span></a>";
+							empty_tag +=			"<div class='caption'>";
+							empty_tag +=				"<h3>Empty Device!</h3>";
+							empty_tag +=			"</div>";
+							empty_tag +=		"</div>";
+							empty_tag +=	"</div>";
+							$('#OfflineList').append($(empty_tag));
+							// list.add($(empty_tag));
+						}
+					}else{
+						var device_tag = "<div class='col-md-3' id='"+res.device_model+"'>";
+						device_tag +=		"<div class='thumbnail hdd_sec'>";
+						device_tag +=			"<a class='device_link' id='"+res.device_model+"_link' href='/device/?name="+res.device_serial+"'><span class='glyphicon glyphicon-hdd hdd_icon' ></span></a>";
+						device_tag +=			"<div class='caption'>";
+						device_tag +=				"<h3>"+res.device_model+"</h3>";
+						device_tag +=			"</div>";
+						device_tag +=		"</div>";
+						device_tag +=	"</div>";
+						var device = $(device_tag);
+						var target = device.find('#'+res.device_model+"_link");
+						target[0].onclick = linkClick;
+
+						$("#OnlineList").append(device);
+					}
+					console.log("Power On Device ", res);
+				});
+			});
+			// });
+		</script>
+	</body>
+</html>
