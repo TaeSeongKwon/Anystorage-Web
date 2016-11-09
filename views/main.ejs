@@ -86,7 +86,8 @@
 			// $(function(){
 			var kk;
 			var pp;
-			var socket = io.connect("www.devkts.kro.kr:9900");
+			// var socket = io.connect("www.devkts.kro.kr:9900");
+			var socket = io.connect("<%=server_addr%>:9900");
 			var user = "<%=userInfo.mem_id%>";
 			function linkClick(){
 			// 	var device_serial = $(this).attr("value");

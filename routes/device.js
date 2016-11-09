@@ -6,7 +6,7 @@ router.get('/', function(req, res, next) {
 	if(req.session.userInfo){
 		var device = req.query.name;
 		console.log(req.query.name);
-		res.render('device', {userInfo : req.session.userInfo, device_model : device});
+		res.render('device', {userInfo : req.session.userInfo, device_model : device, server_addr : req.host});
 	}else 
 		res.redirect("/");
 });

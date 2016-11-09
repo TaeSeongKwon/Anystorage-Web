@@ -5,7 +5,7 @@ var router = express.Router();
 router.get('/', function(req, res, next) {
 	if(req.session.userInfo){
 		var mem_id = req.session.userInfo.mem_id;
-
+		console.log("host ip : ", req.host);
 		req.getConnection(function(err, conn){
 	  		var query = "SELECT * FROM DEVICE WHERE mem_no in(SELECT mem_no FROM MEMBER WHERE mem_id = ?)";
 	  		conn.query(query, [mem_id], function(queryErr, result, fields){
@@ -13,7 +13,7 @@ router.get('/', function(req, res, next) {
 	  				console.log("SELECT Query Error : ", queryErr);
 	  			}
 	  			console.log("result : ", result);
-	  			res.render('main', {userInfo : req.session.userInfo, deviceList : result});
+	  			res.render('main', {userInfo : req.session.userInfo, deviceList : result, server_addr : req.host});
 	  		});
 	  	});
 		

@@ -51,7 +51,8 @@
 		<script type="text/javascript">
 			// $("body").faLoading('fa-refresh');
 
-			var socket = io.connect("http://www.devkts.kro.kr:9900", {timeout : (1000*60*30)});
+			// var socket = io.connect("http://www.devkts.kro.kr:9900", {timeout : (1000*60*30)});
+			var socket = io.connect("<%=server_addr%>:9900", {timeout : (1000*60*30)});
 			var mem_id = "<%=userInfo.mem_id%>";
 			var dev_name = "<%=device_model%>";
 			var fileData;
