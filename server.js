@@ -345,9 +345,9 @@ function initDevice(fileServer){
 				var clientStream = streamSet.get(client_id);
 				
 				// console.log("stream", clientStream);
-				var buffer = new Buffer(buffer1.byteLength);
-				for(var i = 0; i<buffer1.byteLength; i++){
-					buffer[i] = buffer1[i];
+				var buffer = new Buffer(tmp.byteLength);
+				for(var i = 0; i<tmp.byteLength; i++){
+					buffer[i] = tmp[i];
 				}
 				// var buffer = buffer1.buffer;
 				console.log("set : ", buffer);
