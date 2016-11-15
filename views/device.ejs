@@ -231,7 +231,20 @@
 				$$("files").clearAll();	
 				$$("files").parse(fileData);
 			});
-		
+			socket.on("response_upload_chunk", function(data){
+				if(data.isComplete){
+					socket.emit("upload_chunk_ack", data);
+				}else{
+					alert("파일업로드에 실패 했습니다.");
+					updateProgressBar(0);
+					// $('.progress .progress-bar').css('width', '0%');
+					progress_sec.hide();
+					body.waitMe('hide');
+					$$("files").refresh();
+					$$("files").clearAll();	
+					$$("files").parse(fileData);
+				}
+			});
 			function updateFileTree(){
 				console.log("update file tree");
 				socket.emit("update_file_tree", {});

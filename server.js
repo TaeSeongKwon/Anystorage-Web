@@ -128,31 +128,110 @@ function registeManageEvent(client){
 		var fileName = data.fileName;
 		var fileSize = data.fileSize;
 		var fileDest = data.fileDest;
+		var chunkSize = 1024*512;
 		var readSize = 0;
 		var buffer = [];
+		var uploadData = {};
+
+		var totalChunk = parseInt(fileSize / chunkSize);
+
+		totalChunk = (fileSize % chunkSize != 0)? totalChunk+1 : totalChunk;
+
+		uploadData.fileName = fileName;
+		uploadData.fileSize = fileSize;
+		uploadData.fileDest = fileDest;
+		uploadData.totalChunk = totalChunk;
+		io.sockets.in(client.device_channel).emit("uploadFileInfo", uploadData);
+
 		console.log("File Upload!");
+		console.log("file info : ", uploadData);
 		console.log("file : ", fileName);
 		stream.on("data", function(chunk){
 			readSize += chunk.length;
 			buffer.push(chunk);
-			console.log(Math.floor(readSize/fileSize *100)+"%");
+			// console.log(Math.floor(readSize/fileSize *100)+"%");
 		});
 		stream.on("end", function(){
 			data.buffer = [];
-			
+			var chunkBuffer = [];
+			var chunkCnt = 0;
+			var chunkIdx = 1;
 			var i = 0;
+			
+			client.uploadFileInfo = {
+				chunkSize : totalChunk,
+				chunkCrr : 0,
+				chunks : []
+			};
+			var buffer2Array = client.uploadFileInfo.chunks;
+			var tmp = [], tmpCnt = 0;
+
 			for(var idx = 0, len = buffer.length; idx<len; idx++){
 				var row = buffer[idx];
-				console.log("kts : ", buffer[idx]);
 				for(var j = 0, len2 = row.length; j<len2; j++){
-					data.buffer[i++] = row[j];
-					// console.log("idx("+idx+")("+j+") : ", row[j]);
+					tmp[tmpCnt++] = row[j];
 				}
 			}
+			for(var idx = 0; idx < totalChunk; idx++){
+				buffer2Array[idx] = [];
+				for(var i = 0, len = tmp.length; i<chunkSize && i+(idx*chunkSize) < len; i++){
+					buffer2Array[idx][i] = tmp[i+(idx*chunkSize)];
+				}
+			}
+			var packet = {};
+			var upInfo = client.uploadFileInfo;
+			packet.chunkData = upInfo.chunks[upInfo.chunkCrr];
+			packet.chunk_idx = ++upInfo.chunkCrr;
+
+			io.sockets.in(client.device_channel).emit("upload_chunk", packet);
+
+			/*******************************************************/
+			// console.log("chunks : ", client.uploadFileInfo.chunks);
+			// for(var idx = 0, len = buffer.length; idx<len; idx++){
+			// 	var row = buffer[idx];
+			// 	// console.log("kts : ", buffer[idx]);
+			// 	for(var j = 0, len2 = row.length; j<len2; j++){
+			// 		tmp[chunkCnt++] = row[j];
+			// 		if(chunkCnt == chunkSize || (idx == len-1 && j== len2-1)){
+			// 			var packet = {};
+			// 			packet.chunk_idx = parseInt(chunkIdx);
+			// 			packet.chunkData = tmp;
+			// 			console.log("upload_chunk", packet.chunk_idx);
+			// 			io.sockets.in(client.device_channel).emit("upload_chunk", packet);
+			// 			chunkIdx++;
+			// 			chunkCnt = 0;
+			// 			tmp = [];
+			// 		}
+			// 		// data.buffer[i] = row[j];
+			// 		// tmp[i++] = parseInt(row[j]);
+			// 		// console.log("idx("+idx+")("+j+") : ", row[j]);
+			// 	}
+			// }
+			// console.log("chunkSize : ", chunkSize);
+			// console.log("file Size : ", fileSize);
+			/*******************************************************/
+			
+
 			console.log("data receive end!");
 			// console.log("buffer : ", data.buffer);
-			io.sockets.in(client.device_channel).emit("upload", data);
+			//io.sockets.in(client.device_channel).emit("upload", data);
 		});
+	});
+
+	client.on("upload_chunk_ack", function(data){
+		var packet = {};
+		var upInfo = client.uploadFileInfo;
+		if(data.isComplete){
+			packet.chunkData = upInfo.chunks[upInfo.chunkCrr];
+			packet.chunk_idx = ++upInfo.chunkCrr;
+			console.log("upload_chunk", packet.chunk_idx);
+		}else{
+			// upInfo.chunkCrr = data.idx-1;
+			// packet.chunkData = upInfo.chunks[upInfo.chunkCrr];
+			// packet.chunk_idx = ++upInfo.chunkCrr;
+			// console.log("upload_chunk", packet.chunk_idx);
+		}
+		io.sockets.in(client.device_channel).emit("upload_chunk", packet);
 	});
 
 }
@@ -283,6 +362,9 @@ function initDevice(fileServer){
 			console.log("res copy");
 			manageResponse("response_copy", data);
 		});
+		fileServer.on("res_upload_chunk", function(data){
+			manageResponse("response_upload_chunk", data);
+		});
 		fileServer.on("res_upload", function(data){
 			console.log("res_upload");
 			manageResponse("response_upload", data);
@@ -328,11 +410,10 @@ function initDevice(fileServer){
 				var bytes;
 				// console.log(buffer1);
 				var len = chunkList.count();
+				var tmp = buffer1;
 				for(var idx = 2; idx <= len; idx++){
 					console.log(" sum : ", idx, buffer1.byteLength);
-					var tmp;
 					buffer2 = new Uint8Array(chunkList.get(idx));
-
 					tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
 					tmp.set(new Uint8Array(buffer1), 0);
 					tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
